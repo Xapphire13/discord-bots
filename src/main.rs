@@ -9,7 +9,12 @@ use serenity::prelude::*;
 use std::env;
 use std::time::Duration;
 use tokio::time::timeout;
+use tracing::{error, info, instrument};
+use tracing_subscriber::fmt::format::FmtSpan;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
 
+#[derive(Debug)]
 struct Handler {
     ollama_client: Ollama,
     llm_model: String,
@@ -27,8 +32,9 @@ impl EventHandler for Handler {
             return;
         }
 
-        if msg.content.len() >= self.message_length_min
-            && msg.content.len() <= self.message_length_max
+        if (msg.content.len() >= self.message_length_min
+            && msg.content.len() <= self.message_length_max)
+            || msg.guild_id.is_none()
         {
             let mut response = match msg
                 .channel_id
@@ -43,7 +49,7 @@ impl EventHandler for Handler {
             {
                 Ok(msg) => msg,
                 Err(why) => {
-                    eprintln!("Error sending initial message: {why:?}");
+                    error!("Error sending initial message: {why:?}");
                     return;
                 }
             };
@@ -54,10 +60,10 @@ impl EventHandler for Handler {
             {
                 Ok(summary) => summary,
                 Err(why) => {
-                    eprintln!("Error summarizing message: {why:?}");
+                    error!("Error summarizing message: {why:?}");
 
                     if let Err(why) = response.delete(&ctx.http).await {
-                        eprintln!("Error deleting initial message: {:?}", why);
+                        error!("Error deleting initial message: {:?}", why);
                     }
 
                     return;
@@ -68,17 +74,18 @@ impl EventHandler for Handler {
                 .edit(&ctx.http, EditMessage::new().content(summary))
                 .await
             {
-                eprintln!("Error sending message: {:?}", why);
+                error!("Error sending message: {:?}", why);
             }
         }
     }
 
     async fn ready(&self, _: serenity::client::Context, ready: Ready) {
-        println!("{} is connected!", ready.user.name);
+        info!("{} is connected!", ready.user.name);
     }
 }
 
 impl Handler {
+    #[instrument(level = "trace", skip_all)]
     async fn generate_summary(&self, author: &str, content: &str) -> Result<String> {
         let result = timeout(
             Duration::from_mins(10),
@@ -100,6 +107,16 @@ impl Handler {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    let tracing_registry = tracing_subscriber::registry();
+
+    match tracing_journald::layer() {
+        Ok(journald_layer) => tracing_registry.with(journald_layer).init(),
+        Err(_) => tracing_registry
+            .with(tracing_subscriber::EnvFilter::from_default_env())
+            .with(tracing_subscriber::fmt::layer().with_span_events(FmtSpan::NEW | FmtSpan::CLOSE))
+            .init(),
+    };
+
     #[cfg(debug_assertions)]
     dotenvy::dotenv()?;
 
@@ -111,7 +128,9 @@ async fn main() -> Result<()> {
     );
 
     let token = env::var("DISCORD_TOKEN").context("Expected DISCORD_TOKEN in environment")?;
-    let intents = GatewayIntents::GUILD_MESSAGES | GatewayIntents::MESSAGE_CONTENT;
+    let intents = GatewayIntents::GUILD_MESSAGES
+        | GatewayIntents::MESSAGE_CONTENT
+        | GatewayIntents::DIRECT_MESSAGES;
     let handler = Handler {
         ollama_client,
         llm_model: env::var("LLM_MODEL").context("Expected LLM_MODEL in environment")?,
@@ -133,7 +152,7 @@ async fn main() -> Result<()> {
         .context("Error creating client")?;
 
     if let Err(why) = client.start().await {
-        eprintln!("Client error: {:?}", why);
+        error!("Client error: {:?}", why);
     }
 
     Ok(())
