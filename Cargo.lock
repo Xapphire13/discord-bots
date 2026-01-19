@@ -355,6 +355,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "expiry-bot"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "serenity",
+ "shared",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "fastrand"
 version = "2.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -954,11 +965,11 @@ dependencies = [
 
 [[package]]
 name = "nu-ansi-term"
-version = "0.50.1"
+version = "0.50.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d4a28e057d01f97e61255210fcff094d74ed0466038633e95017f5beb68e4399"
+checksum = "7957b9740744892f114936ab4a57b3f487491bbeafaf8083688b16841a4240e5"
 dependencies = [
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -1685,6 +1696,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "shared"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "dotenvy",
+ "tracing-journald",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "shlex"
 version = "1.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1756,13 +1777,11 @@ name = "summarizer-bot"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "dotenvy",
  "ollama-rs",
  "serenity",
+ "shared",
  "tokio",
  "tracing",
- "tracing-journald",
- "tracing-subscriber",
 ]
 
 [[package]]

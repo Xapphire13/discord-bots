@@ -1,0 +1,11 @@
+[package]
+name = "shared"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+anyhow = "1.0.100"
+dotenvy = "0.15.7"
+tracing-journald = "0.3.2"
+tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }

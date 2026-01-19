@@ -1,9 +1,10 @@
 use std::env;
 
 use anyhow::{Context, Result, anyhow};
+use shared::config::BotConfig;
 
 pub struct Config {
-    pub discord_token: String,
+    pub bot: BotConfig,
     pub llm_model: String,
     pub llm_host: String,
     pub llm_port: u16,
@@ -14,8 +15,7 @@ pub struct Config {
 impl Config {
     pub fn from_env() -> Result<Self> {
         let config = Self {
-            discord_token: env::var("DISCORD_TOKEN")
-                .context("Expected DISCORD_TOKEN in environment")?,
+            bot: BotConfig::load()?,
             llm_model: env::var("LLM_MODEL").context("Expected LLM_MODEL in environment")?,
             llm_host: env::var("LLM_HOST").context("Expected LLM_HOST in environment")?,
             llm_port: env::var("LLM_PORT")
