@@ -213,9 +213,9 @@ async fn delete_messages(
         .checked_sub_days(BULK_DELETE_THRESHOLD)
         .context("can't compute bulk delete cutoff")?
         .into();
-    let (mut bulk_jobs, mut individual_jobs): (Vec<_>, Vec<_>) = jobs
-        .iter()
-        .partition(|j| j.message_id.created_at() <= bulk_delete_cutoff);
+    let (mut bulk_jobs, mut individual_jobs): (Vec<_>, Vec<_>) = jobs.iter().partition(|j|
+        // We can bulk delete messages newer than the cutoff
+        j.message_id.created_at() > bulk_delete_cutoff);
 
     if bulk_jobs.len() < BULK_DELETE_MIN {
         individual_jobs.append(&mut bulk_jobs);

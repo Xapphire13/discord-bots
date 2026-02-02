@@ -26,7 +26,7 @@ async fn run_scheduler(
     cancellation: Arc<Mutex<CancellationRegistry>>,
 ) {
     let scheduler_interval =
-        Duration::from_secs(config.lock().unwrap().schedule_interal_seconds as u64);
+        Duration::from_secs(config.lock().unwrap().schedule_interval_seconds as u64);
     let mut interval = interval(scheduler_interval);
     interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
 

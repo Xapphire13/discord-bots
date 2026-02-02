@@ -43,9 +43,8 @@ impl Default for MediaBackupConfig {
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct Config {
-    pub schedule_interal_seconds: u32,
+    pub schedule_interval_seconds: u32,
     pub retention: RetentionConfig,
-    #[serde(default)]
     pub media_backup: MediaBackupConfig,
     #[serde(default)]
     channels: HashMap<ChannelId, ChannelConfig>,
