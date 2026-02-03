@@ -1,0 +1,16 @@
+[Unit]
+Description=Discord {{BOT_NAME}}
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{USER}}
+WorkingDirectory=/opt/{{BOT_NAME}}
+ExecStart=/opt/{{BOT_NAME}}/{{BOT_NAME}}
+Restart=on-failure
+RestartSec=5
+EnvironmentFile=/opt/{{BOT_NAME}}/.env
+
+[Install]
+WantedBy=multi-user.target
