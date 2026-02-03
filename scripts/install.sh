@@ -62,9 +62,10 @@ echo ""
 echo "Copying service file to remote host..."
 scp "$SERVICE_FILE" "$SSH_HOST:/tmp/"
 
-# Create install directory and install service
+# Create data directory and install service
 echo "Installing service on remote host..."
-ssh "$SSH_HOST" "sudo mkdir -p /opt/$BOT_NAME && \
+ssh "$SSH_HOST" "sudo mkdir -p /var/lib/$BOT_NAME && \
+    sudo chown $USER:$USER /var/lib/$BOT_NAME && \
     sudo mv /tmp/${BOT_NAME}.service /etc/systemd/system/ && \
     sudo systemctl daemon-reload && \
     sudo systemctl enable $BOT_NAME"

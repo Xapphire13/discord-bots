@@ -64,7 +64,7 @@ scp "$BINARY_PATH" "$SSH_HOST:/tmp/$BOT_NAME/"
 
 for config_file in $CONFIG_FILES; do
     if [[ -f "$REPO_ROOT/$BOT_NAME/$config_file" ]]; then
-        if ssh "$SSH_HOST" "test -f /opt/$BOT_NAME/$config_file"; then
+        if ssh "$SSH_HOST" "test -f /var/lib/$BOT_NAME/$config_file"; then
             echo "  Skipping $config_file (already exists on remote)"
         else
             echo "  Copying $config_file"
@@ -78,8 +78,11 @@ echo "Stopping $BOT_NAME service..."
 ssh "$SSH_HOST" "sudo systemctl stop $BOT_NAME" || echo "  (service may not have been running)"
 
 # Step 4: Install files
-echo "Installing files to /opt/$BOT_NAME/..."
-ssh "$SSH_HOST" "sudo mkdir -p /opt/$BOT_NAME && sudo mv /tmp/$BOT_NAME/* /opt/$BOT_NAME/"
+echo "Installing binary to /usr/local/bin/..."
+ssh "$SSH_HOST" "sudo mv /tmp/$BOT_NAME/$BOT_NAME /usr/local/bin/"
+
+echo "Installing config files to /var/lib/$BOT_NAME/..."
+ssh "$SSH_HOST" "if ls /tmp/$BOT_NAME/* >/dev/null 2>&1; then sudo mv /tmp/$BOT_NAME/* /var/lib/$BOT_NAME/; fi"
 
 # Step 5: Start service
 echo "Starting $BOT_NAME service..."
