@@ -6,7 +6,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use serenity::all::ChannelId;
 
@@ -59,15 +59,15 @@ pub struct Config {
 
 impl Config {
     pub fn load() -> Result<Self> {
-        let bytes = fs::read(CONFIG_PATH)?;
+        let bytes = fs::read(CONFIG_PATH).context(format!("Error reading {CONFIG_PATH}"))?;
         let config = toml::from_slice(bytes.as_slice())?;
         Ok(config)
     }
 
     pub fn save(&self) -> Result<()> {
         let content = toml::to_string_pretty(&self)?;
-        fs::write(CONFIG_TEMP_PATH, &content)?;
-        fs::rename(CONFIG_TEMP_PATH, CONFIG_PATH)?;
+        fs::write(CONFIG_TEMP_PATH, &content).context("saving temp config file")?;
+        fs::rename(CONFIG_TEMP_PATH, CONFIG_PATH).context("updating config file")?;
         Ok(())
     }
 
