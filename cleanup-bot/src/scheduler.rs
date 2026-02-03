@@ -7,12 +7,12 @@ use tracing::{debug, info};
 
 use crate::cancellation_registry::CancellationRegistry;
 use crate::cleanup::cleanup_channel;
-use crate::config::Config;
+use crate::config_store::ConfigStore;
 
 /// Spawn the cleanup scheduler task.
 pub fn spawn_scheduler(
     http: Arc<Http>,
-    config: Arc<Mutex<Config>>,
+    config: ConfigStore,
     cancellation: Arc<Mutex<CancellationRegistry>>,
 ) -> tokio::task::JoinHandle<()> {
     tokio::spawn(async move {
@@ -22,11 +22,10 @@ pub fn spawn_scheduler(
 
 async fn run_scheduler(
     http: Arc<Http>,
-    config: Arc<Mutex<Config>>,
+    config: ConfigStore,
     cancellation: Arc<Mutex<CancellationRegistry>>,
 ) {
-    let scheduler_interval =
-        Duration::from_secs(config.lock().unwrap().schedule_interval_seconds as u64);
+    let scheduler_interval = Duration::from_secs(config.schedule_interval_seconds().get() as u64);
     let mut interval = interval(scheduler_interval);
     interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
 
@@ -39,7 +38,7 @@ async fn run_scheduler(
         interval.tick().await;
 
         // Get enabled channels snapshot
-        let channels = config.lock().unwrap().enabled_channels();
+        let channels = config.enabled_channels();
 
         if channels.is_empty() {
             debug!("No enabled channels, skipping cleanup tick");
@@ -54,7 +53,7 @@ async fn run_scheduler(
         // Spawn independent cleanup tasks for each channel
         for (channel_id, retention_days) in channels {
             let http = Arc::clone(&http);
-            let config = Arc::clone(&config);
+            let config = config.clone();
             let cancellation_registry = Arc::clone(&cancellation);
 
             // Check and register atomically to prevent race condition

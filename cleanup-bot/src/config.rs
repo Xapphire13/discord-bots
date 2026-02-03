@@ -1,31 +1,32 @@
-use std::{collections::HashMap, fs, path::PathBuf};
+use std::{collections::HashMap, fs, num::NonZeroU32, path::PathBuf};
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use serenity::all::ChannelId;
 
 const CONFIG_PATH: &str = "./config.toml";
+const CONFIG_TEMP_PATH: &str = "./config.toml.tmp";
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ChannelConfig {
     pub name: String,
     /// Override for the global retention policy
-    pub policy_days: Option<u32>,
+    pub policy_days: Option<NonZeroU32>,
     /// Pagination cursor: oldest message ID seen, next run fetches BEFORE this
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pagination_cursor: Option<u64>,
 }
 
 impl ChannelConfig {
-    pub fn resolve_policy_days(&self, config: &Config) -> u32 {
+    pub fn resolve_policy_days(&self, config: &Config) -> NonZeroU32 {
         self.policy_days
             .unwrap_or(config.retention.default_policy_days)
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct RetentionConfig {
-    pub default_policy_days: u32,
+    pub default_policy_days: NonZeroU32,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -41,9 +42,9 @@ impl Default for MediaBackupConfig {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
-    pub schedule_interval_seconds: u32,
+    pub schedule_interval_seconds: NonZeroU32,
     pub retention: RetentionConfig,
     pub media_backup: MediaBackupConfig,
     #[serde(default)]
@@ -52,18 +53,15 @@ pub struct Config {
 
 impl Config {
     pub fn load() -> Result<Self> {
-        let config = if let Ok(bytes) = fs::read(CONFIG_PATH) {
-            toml::from_slice(bytes.as_slice())?
-        } else {
-            Self::default()
-        };
-
+        let bytes = fs::read(CONFIG_PATH)?;
+        let config = toml::from_slice(bytes.as_slice())?;
         Ok(config)
     }
 
     pub fn save(&self) -> Result<()> {
-        fs::write(CONFIG_PATH, toml::to_string_pretty(&self)?)?;
-
+        let content = toml::to_string_pretty(&self)?;
+        fs::write(CONFIG_TEMP_PATH, &content)?;
+        fs::rename(CONFIG_TEMP_PATH, CONFIG_PATH)?;
         Ok(())
     }
 
@@ -71,23 +69,27 @@ impl Config {
         &mut self,
         channel_id: ChannelId,
         config: ChannelConfig,
-    ) -> Result<()> {
+    ) -> Result<NonZeroU32> {
+        let new_days = config
+            .policy_days
+            .unwrap_or(self.retention.default_policy_days);
+
         // Check if policy is becoming stricter (fewer days) - if so, clear pagination cursor
         if let Some(existing) = self.channels.get(&channel_id) {
             let old_days = existing.resolve_policy_days(self);
-            let new_days = config
-                .policy_days
-                .unwrap_or(self.retention.default_policy_days);
             if new_days < old_days {
                 // Policy is stricter, start fresh from newest messages
                 let mut config = config;
                 config.pagination_cursor = None;
                 self.channels.insert(channel_id, config);
-                return self.save();
+                self.save()?;
+                return Ok(new_days);
             }
         }
+
         self.channels.insert(channel_id, config);
-        self.save()
+        self.save()?;
+        Ok(new_days)
     }
 
     pub fn get_pagination_cursor(&self, channel_id: ChannelId) -> Option<u64> {
@@ -114,7 +116,7 @@ impl Config {
     }
 
     /// Returns a list of all enabled channels with their resolved retention policies.
-    pub fn enabled_channels(&self) -> Vec<(ChannelId, u32)> {
+    pub fn enabled_channels(&self) -> Vec<(ChannelId, NonZeroU32)> {
         self.channels
             .iter()
             .map(|(id, config)| (*id, config.resolve_policy_days(self)))

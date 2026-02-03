@@ -1,3 +1,5 @@
+use std::num::NonZeroU32;
+
 use serenity::all::{Message, MessageId};
 
 use crate::extensions::{AttachmentsExt, MediaAttachment};
@@ -58,8 +60,8 @@ pub fn classify_messages(messages: Vec<Message>) -> ClassifiedMessages {
 }
 
 /// Filter messages to only those older than the retention cutoff.
-pub fn filter_expired_messages(messages: Vec<Message>, retention_days: u32) -> Vec<Message> {
-    let cutoff = chrono::Utc::now() - chrono::Duration::days(retention_days as i64);
+pub fn filter_expired_messages(messages: Vec<Message>, retention_days: NonZeroU32) -> Vec<Message> {
+    let cutoff = chrono::Utc::now() - chrono::Duration::days(retention_days.get() as i64);
 
     messages
         .into_iter()

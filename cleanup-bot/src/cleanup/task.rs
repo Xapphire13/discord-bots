@@ -1,3 +1,4 @@
+use std::num::NonZeroU32;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -10,7 +11,7 @@ use tracing::{debug, error, info, warn};
 
 use crate::cancellation_registry::CancellationRegistry;
 use crate::cleanup::queue::{BackupJob, DeleteJob, classify_messages, filter_expired_messages};
-use crate::config::Config;
+use crate::config_store::ConfigStore;
 use crate::media::MediaDownloader;
 
 // Note: Discord requires messages to be < 14 days old for bulk delete
@@ -27,10 +28,10 @@ const MAX_PAGINATION_ROUNDS: usize = 10;
 /// Run cleanup for a single channel.
 pub async fn cleanup_channel(
     http: Arc<Http>,
-    config: Arc<Mutex<Config>>,
+    config: ConfigStore,
     cancellation: Arc<Mutex<CancellationRegistry>>,
     channel_id: ChannelId,
-    retention_days: u32,
+    retention_days: NonZeroU32,
     cancel_rx: watch::Receiver<bool>,
 ) {
     let result = run_cleanup(http, config, channel_id, retention_days, cancel_rx).await;
@@ -45,9 +46,9 @@ pub async fn cleanup_channel(
 
 async fn run_cleanup(
     http: Arc<Http>,
-    config: Arc<Mutex<Config>>,
+    config: ConfigStore,
     channel_id: ChannelId,
-    retention_days: u32,
+    retention_days: NonZeroU32,
     mut cancel_rx: watch::Receiver<bool>,
 ) -> Result<()> {
     use serenity::all::{Message, MessageId};
@@ -55,11 +56,8 @@ async fn run_cleanup(
     info!("Starting cleanup for channel {channel_id} (retention: {retention_days} days)");
 
     // Load pagination cursor from config
-    let mut cursor: Option<MessageId> = config
-        .lock()
-        .unwrap()
-        .get_pagination_cursor(channel_id)
-        .map(MessageId::new);
+    let mut cursor: Option<MessageId> =
+        config.get_pagination_cursor(channel_id).map(MessageId::new);
 
     let mut expired_messages: Vec<Message> = Vec::new();
     let mut reached_end = false;
@@ -140,19 +138,13 @@ async fn run_cleanup(
         }
     }
 
-    // Save pagination state
+    // Clear pagination cursor if we reached the end of history
     if reached_end {
         debug!("Reached end of channel history, clearing pagination cursor");
-        config
-            .lock()
-            .unwrap()
-            .set_pagination_cursor(channel_id, None)?;
+        config.set_pagination_cursor(channel_id, None)?;
     } else {
         debug!("Saving pagination cursor: {:?}", cursor);
-        config
-            .lock()
-            .unwrap()
-            .set_pagination_cursor(channel_id, cursor.map(|c| c.get()))?;
+        config.set_pagination_cursor(channel_id, cursor.map(|c| c.get()))?;
     }
 
     if expired_messages.is_empty() {
@@ -192,7 +184,7 @@ async fn run_cleanup(
 
     // Process backup jobs (media messages)
     if !classified.backup_jobs.is_empty() {
-        let download_dir = config.lock().unwrap().media_backup.download_dir.clone();
+        let download_dir = config.media_backup_config().download_dir;
 
         process_backup_jobs(&http, download_dir, &classified.backup_jobs, &mut cancel_rx).await?;
     }

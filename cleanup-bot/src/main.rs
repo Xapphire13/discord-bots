@@ -9,6 +9,7 @@ use crate::{
     cancellation_registry::CancellationRegistry,
     command::{CommandData, cleanup},
     config::Config,
+    config_store::ConfigStore,
     scheduler::spawn_scheduler,
 };
 
@@ -16,6 +17,7 @@ mod cancellation_registry;
 mod cleanup;
 mod command;
 mod config;
+mod config_store;
 mod extensions;
 mod media;
 mod scheduler;
@@ -24,7 +26,7 @@ mod scheduler;
 async fn main() -> Result<()> {
     shared::init_tracing!()?;
     let bot_config = shared::load_bot_config!()?;
-    let config = Arc::new(Mutex::new(Config::load()?));
+    let config_store = ConfigStore::new(Config::load()?);
     let cancellation = Arc::new(Mutex::new(CancellationRegistry::new()));
     let intents = GatewayIntents::MESSAGE_CONTENT | GatewayIntents::GUILD_MESSAGES;
 
@@ -34,7 +36,7 @@ async fn main() -> Result<()> {
             ..Default::default()
         })
         .setup({
-            let config = Arc::clone(&config);
+            let config_store = config_store.clone();
             let cancellation = Arc::clone(&cancellation);
 
             move |ctx, ready, framework| {
@@ -50,12 +52,12 @@ async fn main() -> Result<()> {
                     // Spawn the cleanup scheduler
                     spawn_scheduler(
                         Arc::clone(&http),
-                        Arc::clone(&config),
+                        config_store.clone(),
                         Arc::clone(&cancellation),
                     );
 
                     Ok(CommandData {
-                        config,
+                        config: config_store,
                         cancellation,
                     })
                 })

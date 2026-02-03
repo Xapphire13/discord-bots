@@ -1,3 +1,4 @@
+use std::num::NonZeroU32;
 use std::sync::{Arc, Mutex};
 
 use anyhow::{Error, Result};
@@ -5,10 +6,11 @@ use indoc::formatdoc;
 use serenity::all::Mentionable;
 
 use crate::cancellation_registry::CancellationRegistry;
-use crate::config::{ChannelConfig, Config};
+use crate::config::ChannelConfig;
+use crate::config_store::ConfigStore;
 
 pub struct CommandData {
-    pub config: Arc<Mutex<Config>>,
+    pub config: ConfigStore,
     pub cancellation: Arc<Mutex<CancellationRegistry>>,
 }
 
@@ -22,7 +24,9 @@ pub async fn cleanup(_ctx: Context<'_>) -> Result<()> {
 #[poise::command(slash_command)]
 pub async fn enable(
     ctx: Context<'_>,
-    #[description = "How many days should messages be retained"] policy_days: Option<u32>,
+    #[description = "How many days should messages be retained"]
+    #[min = 1]
+    policy_days: Option<NonZeroU32>,
 ) -> Result<()> {
     let channel_config = ChannelConfig {
         name: ctx.channel_id().name(&ctx.http()).await?,
@@ -30,20 +34,17 @@ pub async fn enable(
         pagination_cursor: None,
     };
 
-    let policy_days = {
-        let mut config = ctx.data().config.lock().unwrap();
-        let policy_days = channel_config.resolve_policy_days(&config);
-        config.add_channel_config(ctx.channel_id(), channel_config)?;
-
-        policy_days
-    };
+    let policy_days = ctx
+        .data()
+        .config
+        .add_channel(ctx.channel_id(), channel_config)?;
 
     ctx.say(formatdoc! {"
         Enabled cleanup for {channel}
         Retention policy: **{policy_days} {day_suffix}**
         ",
         channel = ctx.channel_id().mention(),
-        day_suffix = if policy_days == 1 {"day"}  else {"days"}
+        day_suffix = if policy_days.get() == 1 {"day"}  else {"days"}
     })
     .await?;
     Ok(())
@@ -51,10 +52,7 @@ pub async fn enable(
 
 #[poise::command(slash_command)]
 pub async fn disable(ctx: Context<'_>) -> Result<()> {
-    {
-        let mut config = ctx.data().config.lock().unwrap();
-        config.remove_channel(ctx.channel_id())?;
-    };
+    ctx.data().config.remove_channel(ctx.channel_id())?;
 
     // Cancel any running cleanup task for the channel
     let was_running = ctx
