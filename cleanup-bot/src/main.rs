@@ -28,7 +28,7 @@ async fn main() -> Result<()> {
     let config = Config::load()?;
     let backup_worker_config = config.media_backup.worker.clone();
     let config_store = ConfigStore::new(config);
-    let backup_queue = Arc::new(Mutex::new(BackupQueue::load_default()?));
+    let backup_queue = Arc::new(Mutex::new(BackupQueue::load()?));
     let cancellation = Arc::new(Mutex::new(CancellationRegistry::new()));
     let intents = GatewayIntents::MESSAGE_CONTENT | GatewayIntents::GUILD_MESSAGES;
 

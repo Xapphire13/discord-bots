@@ -33,30 +33,30 @@ pub struct PendingBackup {
 /// Persistent queue for tracking pending backups.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BackupQueue {
-    #[serde(skip)]
-    path: PathBuf,
     entries: HashMap<String, PendingBackup>,
 }
 
 impl BackupQueue {
     /// Load the backup queue from disk, or create a new empty queue.
-    pub fn load(path: PathBuf) -> Result<Self> {
-        if let Ok(content) = fs::read_to_string(&path) {
-            let mut queue: BackupQueue =
-                toml::from_str(&content).context(format!("Failed to parse {}", path.display()))?;
-            queue.path = path;
+    pub fn load() -> Result<Self> {
+        if let Ok(content) = fs::read_to_string(&PENDING_BACKUPS_PATH) {
+            let mut queue: BackupQueue = toml::from_str(&content)
+                .context(format!("Failed to parse {}", PENDING_BACKUPS_PATH))?;
+
+            queue.entries.iter_mut().for_each(|(_, entry)| {
+                if entry.status == BackupStatus::InProgress {
+                    // If we're loading the list and it has InProgress items, that means the process
+                    // shut down during upload, reset status to pending
+                    entry.status = BackupStatus::Pending;
+                }
+            });
+
             Ok(queue)
         } else {
             Ok(Self {
-                path,
                 entries: HashMap::new(),
             })
         }
-    }
-
-    /// Load from the default path.
-    pub fn load_default() -> Result<Self> {
-        Self::load(PathBuf::from(PENDING_BACKUPS_PATH))
     }
 
     /// Add a backup to the queue.
@@ -133,7 +133,8 @@ impl BackupQueue {
         let content = toml::to_string_pretty(&self)?;
         let temp_path = PathBuf::from(PENDING_BACKUPS_TEMP_PATH);
         fs::write(&temp_path, &content).context("Failed to write temp backup queue file")?;
-        fs::rename(&temp_path, &self.path).context("Failed to rename backup queue file")?;
+        fs::rename(&temp_path, PENDING_BACKUPS_PATH)
+            .context("Failed to rename backup queue file")?;
         Ok(())
     }
 }
