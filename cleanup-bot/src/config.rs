@@ -13,6 +13,17 @@ use serenity::all::ChannelId;
 const CONFIG_PATH: &str = "./config.toml";
 const CONFIG_TEMP_PATH: &str = "./config.toml.tmp";
 
+fn default_upload_folder() -> String {
+    "/discord-backups".to_string()
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct OneDriveConfig {
+    pub client_id: String,
+    #[serde(default = "default_upload_folder")]
+    pub upload_folder: String,
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ChannelConfig {
     pub name: String,
@@ -81,6 +92,8 @@ pub struct Config {
     pub schedule_interval_seconds: NonZeroU32,
     pub retention: RetentionConfig,
     pub media_backup: MediaBackupConfig,
+    #[serde(default)]
+    pub onedrive: Option<OneDriveConfig>,
     #[serde(default)]
     channels: HashMap<ChannelId, ChannelConfig>,
 }

@@ -1,3 +1,4 @@
+use std::ops::Deref;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -8,15 +9,24 @@ use tracing::{debug, error, info, warn};
 
 use super::queue::BackupQueue;
 use crate::config::BackupWorkerConfig;
+use crate::onedrive::OneDriveClient;
 
 /// Spawn the background backup worker.
-pub fn spawn_worker(queue: Arc<Mutex<BackupQueue>>, config: BackupWorkerConfig) -> JoinHandle<()> {
+pub fn spawn_worker(
+    queue: Arc<Mutex<BackupQueue>>,
+    config: BackupWorkerConfig,
+    onedrive_client: Arc<OneDriveClient>,
+) -> JoinHandle<()> {
     tokio::spawn(async move {
-        run_worker(queue, config).await;
+        run_worker(queue, config, onedrive_client).await;
     })
 }
 
-async fn run_worker(queue: Arc<Mutex<BackupQueue>>, config: BackupWorkerConfig) {
+async fn run_worker(
+    queue: Arc<Mutex<BackupQueue>>,
+    config: BackupWorkerConfig,
+    onedrive_client: Arc<OneDriveClient>,
+) {
     let check_interval = Duration::from_secs(config.check_interval_seconds);
     let mut interval = interval(check_interval);
 
@@ -83,8 +93,8 @@ async fn run_worker(queue: Arc<Mutex<BackupQueue>>, config: BackupWorkerConfig) 
                 }
             }
 
-            // Attempt upload (stubbed)
-            match upload_to_cloud(&local_path).await {
+            // Attempt upload
+            match upload_to_cloud(&local_path, onedrive_client.deref()).await {
                 Ok(()) => {
                     info!("Successfully uploaded {}", local_path.display());
 
@@ -127,13 +137,12 @@ async fn run_worker(queue: Arc<Mutex<BackupQueue>>, config: BackupWorkerConfig) 
     }
 }
 
-/// Stubbed cloud upload function.
-/// TODO: Implement actual OneDrive upload.
-async fn upload_to_cloud(local_path: &Path) -> Result<(), String> {
-    debug!("Stubbed upload for {}", local_path.display());
-
-    // Always fail until real upload is implemented - prevents file deletion
-    Err("cloud upload not implemented".to_string())
+/// Upload file to cloud storage.
+async fn upload_to_cloud(local_path: &Path, client: &OneDriveClient) -> Result<(), String> {
+    client
+        .upload_file(local_path)
+        .await
+        .map_err(|e| e.to_string())
 }
 
 /// Reset failed backups to pending status for retry.
