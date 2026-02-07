@@ -7,22 +7,22 @@ use tracing::{debug, info};
 
 use crate::backup::BackupQueue;
 use crate::cancellation::CancellationRegistry;
-use crate::cleanup::cleanup_channel;
+use crate::cleanup::task::cleanup_channel;
 use crate::config::ConfigStore;
 
 /// Spawn the cleanup scheduler task.
-pub fn spawn_scheduler(
+pub fn spawn_worker(
     http: Arc<Http>,
     config: ConfigStore,
     backup_queue: Arc<Mutex<BackupQueue>>,
     cancellation: Arc<Mutex<CancellationRegistry>>,
 ) -> tokio::task::JoinHandle<()> {
     tokio::spawn(async move {
-        run_scheduler(http, config, backup_queue, cancellation).await;
+        run_worker(http, config, backup_queue, cancellation).await;
     })
 }
 
-async fn run_scheduler(
+async fn run_worker(
     http: Arc<Http>,
     config: ConfigStore,
     backup_queue: Arc<Mutex<BackupQueue>>,

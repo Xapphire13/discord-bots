@@ -9,10 +9,10 @@ use tracing::{error, info};
 use crate::{
     backup::BackupQueue,
     cancellation::CancellationRegistry,
+    cleanup::spawn_worker,
     command::{CommandData, cleanup},
     config::{Config, ConfigStore},
     onedrive::{OneDriveClient, TokenStore},
-    scheduler::spawn_scheduler,
 };
 
 mod backup;
@@ -22,7 +22,6 @@ mod command;
 mod config;
 mod media;
 mod onedrive;
-mod scheduler;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -86,7 +85,7 @@ async fn main() -> Result<()> {
                     }
 
                     // Spawn the cleanup scheduler
-                    spawn_scheduler(
+                    spawn_worker(
                         Arc::clone(&http),
                         config_store.clone(),
                         backup_queue,

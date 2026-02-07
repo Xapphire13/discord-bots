@@ -1,4 +1,5 @@
 pub mod queue;
 pub mod task;
+pub mod worker;
 
-pub use task::cleanup_channel;
+pub use worker::spawn_worker;
