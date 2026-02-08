@@ -3,7 +3,12 @@ use std::sync::Arc;
 use maud::{Markup, PreEscaped, html};
 use rocket::{State, get};
 
-use crate::state::{AppState, ONLINE_GRACE_PERIOD};
+use crate::{
+    state::{AppState, ONLINE_GRACE_PERIOD},
+    views::breadcrumbs::{Breadcrumb, breadcrumbs},
+};
+
+mod breadcrumbs;
 
 const STYLE: &str = include_str!("../assets/main.css");
 
@@ -43,7 +48,7 @@ fn format_relative(seconds_ago: i64) -> String {
 #[get("/")]
 pub fn index(state: &State<Arc<AppState>>) -> Markup {
     let content = html! {
-        h1 { "> dashboard" }
+        (breadcrumbs(&[Breadcrumb { label: "bots", href: None}]))
         div
             hx-get="/fragments/bot-list"
             hx-trigger="every 30s"
@@ -102,8 +107,10 @@ pub fn bot_detail(name: &str, state: &State<Arc<AppState>>) -> Option<Markup> {
     drop(registry);
 
     let content = html! {
-        a.back-link href="/" { "< back" }
-        h1 { "> " (bot_name) }
+        (breadcrumbs(&[
+            Breadcrumb { label: "bots", href: Some("/")},
+            Breadcrumb { label: name, href: None }])
+        )
 
         @if online {
             div.status.online { "[ONLINE]" }
