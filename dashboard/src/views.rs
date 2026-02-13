@@ -82,7 +82,6 @@ fn bot_list_inner(state: &State<Arc<AppState>>) -> Markup {
                                 div.status.offline { "[OFFLINE]" }
                             }
                             div.meta { "Last seen: " (format_relative(ago)) }
-                            div.meta { "Registered: " (bot.registered_at.format("%Y-%m-%d %H:%M")) }
                         }
                     }
                 }
@@ -103,7 +102,6 @@ pub fn bot_detail(name: &str, state: &State<Arc<AppState>>) -> Option<Markup> {
     let online = registry.is_online(name, ONLINE_GRACE_PERIOD);
     let ago = (chrono::Utc::now() - bot.last_heartbeat).num_seconds();
     let bot_name = bot.name.clone();
-    let registered_at = bot.registered_at.format("%Y-%m-%d %H:%M:%S").to_string();
     drop(registry);
 
     let content = html! {
@@ -118,7 +116,6 @@ pub fn bot_detail(name: &str, state: &State<Arc<AppState>>) -> Option<Markup> {
             div.status.offline { "[OFFLINE]" }
         }
         div.meta { "Last seen: " (format_relative(ago)) }
-        div.meta { "Registered: " (registered_at) }
 
         div
             hx-get=(format!("/fragments/bot/{bot_name}/charts"))

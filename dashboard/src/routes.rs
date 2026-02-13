@@ -13,7 +13,6 @@ pub struct HeartbeatRequest {
 #[derive(Serialize)]
 pub struct HeartbeatResponse {
     name: String,
-    registered_at: String,
     last_heartbeat: String,
 }
 
@@ -27,7 +26,6 @@ pub fn heartbeat(
 
     Json(HeartbeatResponse {
         name: info.name.clone(),
-        registered_at: info.registered_at.to_rfc3339(),
         last_heartbeat: info.last_heartbeat.to_rfc3339(),
     })
 }

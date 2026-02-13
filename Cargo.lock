@@ -369,6 +369,7 @@ dependencies = [
  "maud",
  "rocket",
  "serde",
+ "serde_json",
  "shared",
  "tokio",
 ]

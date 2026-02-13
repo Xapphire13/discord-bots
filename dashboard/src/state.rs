@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use std::sync::RwLock;
 
 use chrono::Duration;
@@ -9,6 +10,9 @@ pub const DATA_RETENTION: Duration = Duration::days(7);
 pub const ONLINE_GRACE_PERIOD: Duration = Duration::minutes(5);
 pub const PRUNE_INTERVAL: std::time::Duration = std::time::Duration::from_secs(3600);
 
+const METRICS_DIR: &str = "data/metrics";
+const HEARTBEATS_DIR: &str = "data/heartbeats";
+
 pub struct AppState {
     pub registry: RwLock<BotRegistry>,
     pub metrics: RwLock<MetricStore>,
@@ -17,8 +21,8 @@ pub struct AppState {
 impl AppState {
     pub fn new() -> Self {
         AppState {
-            registry: RwLock::new(BotRegistry::new()),
-            metrics: RwLock::new(MetricStore::new(DATA_RETENTION)),
+            registry: RwLock::new(BotRegistry::new(PathBuf::from(HEARTBEATS_DIR))),
+            metrics: RwLock::new(MetricStore::new(DATA_RETENTION, PathBuf::from(METRICS_DIR))),
         }
     }
 }

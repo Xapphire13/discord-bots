@@ -1,11 +1,15 @@
 use std::collections::{HashMap, HashSet, VecDeque};
+use std::path::PathBuf;
 
 use chrono::{DateTime, Duration, Utc};
+use serde::{Deserialize, Serialize};
 
+use crate::storage;
+
+#[derive(Serialize, Deserialize)]
 pub struct MetricEvent {
     pub event_id: String,
     pub value: Option<f64>,
-    #[allow(dead_code)]
     pub tags: HashMap<String, String>,
     pub timestamp: DateTime<Utc>,
 }
@@ -13,13 +17,30 @@ pub struct MetricEvent {
 pub struct MetricStore {
     metrics: HashMap<String, VecDeque<MetricEvent>>,
     retention: Duration,
+    data_dir: PathBuf,
 }
 
 impl MetricStore {
-    pub fn new(retention: Duration) -> Self {
+    pub fn new(retention: Duration, data_dir: PathBuf) -> Self {
+        let mut metrics: HashMap<String, VecDeque<MetricEvent>> = HashMap::new();
+
+        if let Ok(bots) = storage::discover_bots(&data_dir) {
+            for bot_name in bots {
+                match storage::load_lines::<MetricEvent>(&data_dir, &bot_name) {
+                    Ok(events) => {
+                        if !events.is_empty() {
+                            metrics.insert(bot_name, VecDeque::from(events));
+                        }
+                    }
+                    Err(e) => eprintln!("warning: failed to load metrics for {bot_name}: {e}"),
+                }
+            }
+        }
+
         MetricStore {
-            metrics: HashMap::new(),
+            metrics,
             retention,
+            data_dir,
         }
     }
 
@@ -31,13 +52,19 @@ impl MetricStore {
         tags: HashMap<String, String>,
     ) -> DateTime<Utc> {
         let timestamp = Utc::now();
-        let events = self.metrics.entry(bot_name.to_owned()).or_default();
-        events.push_back(MetricEvent {
+        let event = MetricEvent {
             event_id,
             value,
             tags,
             timestamp,
-        });
+        };
+
+        if let Err(e) = storage::append_line(&self.data_dir, bot_name, &event) {
+            eprintln!("warning: failed to persist metric for {bot_name}: {e}");
+        }
+
+        let events = self.metrics.entry(bot_name.to_owned()).or_default();
+        events.push_back(event);
         timestamp
     }
 
@@ -76,10 +103,31 @@ impl MetricStore {
                 events.pop_front();
             }
         }
-        self.metrics.retain(|_, events| !events.is_empty());
+
+        let empty_bots: Vec<String> = self
+            .metrics
+            .iter()
+            .filter(|(_, events)| events.is_empty())
+            .map(|(name, _)| name.clone())
+            .collect();
+        for name in &empty_bots {
+            self.metrics.remove(name);
+            if let Err(e) = storage::remove_bot_file(&self.data_dir, name) {
+                eprintln!("warning: failed to remove metric file for {name}: {e}");
+            }
+        }
+
+        for (name, events) in &self.metrics {
+            if let Err(e) = storage::rewrite_lines(&self.data_dir, name, events.iter()) {
+                eprintln!("warning: failed to rewrite metrics for {name}: {e}");
+            }
+        }
     }
 
     pub fn remove_bot(&mut self, name: &str) {
         self.metrics.remove(name);
+        if let Err(e) = storage::remove_bot_file(&self.data_dir, name) {
+            eprintln!("warning: failed to remove metric file for {name}: {e}");
+        }
     }
 }

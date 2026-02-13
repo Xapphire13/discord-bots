@@ -10,6 +10,7 @@ mod metrics;
 mod registry;
 mod routes;
 mod state;
+mod storage;
 mod views;
 
 #[launch]
