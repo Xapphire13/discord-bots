@@ -1,7 +1,10 @@
 use std::sync::Arc;
 
 use maud::{Markup, PreEscaped, html};
-use rocket::{State, get};
+use rocket::{
+    State, get,
+    http::{ContentType, Status},
+};
 
 use crate::{
     state::{AppState, ONLINE_GRACE_PERIOD},
@@ -10,7 +13,7 @@ use crate::{
 
 mod breadcrumbs;
 
-turf::style_sheet!("assets/main.css");
+turf::style_sheet!("assets/styles.css");
 
 fn page_shell(title: &str, content: Markup) -> Markup {
     html! {
@@ -20,7 +23,7 @@ fn page_shell(title: &str, content: Markup) -> Markup {
                 meta charset="utf-8";
                 meta name="viewport" content="width=device-width, initial-scale=1";
                 title { (title) }
-                style { (PreEscaped(STYLE_SHEET)) }
+                link rel="stylesheet" href="/styles.css";
                 script
                     src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.min.js"
                     integrity="sha384-/TgkGk7p307TH7EXJDuUlgG3Ce1UVolAOFopFekQkkXihi5u/6OCvVKyz1W+idaz"
@@ -43,6 +46,11 @@ fn format_relative(seconds_ago: i64) -> String {
     } else {
         format!("{}d ago", seconds_ago / 86400)
     }
+}
+
+#[get("/styles.css")]
+pub fn styles() -> (Status, (ContentType, &'static str)) {
+    (Status::Ok, (ContentType::CSS, STYLE_SHEET))
 }
 
 #[get("/")]

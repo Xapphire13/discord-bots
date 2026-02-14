@@ -23,6 +23,7 @@ fn rocket() -> _ {
             routes![
                 routes::heartbeat,
                 routes::record_metric,
+                views::styles,
                 views::index,
                 views::bot_detail,
                 views::fragment_bot_list,
