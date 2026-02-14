@@ -1,0 +1,40 @@
+/* Fonts */
+@import url("https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap");
+
+/* Theme color variables */
+:root {
+    --foreground: #bf8fff;
+    --background: #1b1b1b;
+    --status-online: #00ff41;
+    --status-offline: #ff3232;
+    --muted: #444;
+}
+
+/* Global reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Base page styling */
+body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: "Share Tech Mono", monospace;
+    padding: 12px;
+}
+
+/* Link defaults */
+a {
+    color: var(--foreground);
+    text-decoration: none;
+}
+
+a:hover,
+a:focus-visible {
+    background: var(--foreground);
+    color: var(--background);
+    text-decoration: none;
+    outline: none;
+}

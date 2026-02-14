@@ -1,0 +1,85 @@
+/* Terminal menu list */
+.menu {
+    display: flex;
+    flex-direction: column;
+    margin-top: 8px;
+}
+
+/* Menu row — horizontal layout, hover inverts colors */
+.menu-row {
+    display: flex;
+    align-items: center;
+    padding: 4px 8px;
+    cursor: pointer;
+    gap: 8px;
+    color: var(--foreground);
+}
+
+/* Checkbox toggle on hover/focus */
+.checkbox {
+    flex-shrink: 0;
+}
+
+.checkbox-on {
+    flex-shrink: 0;
+    display: none;
+}
+
+.menu-row:hover .checkbox,
+.menu-row:focus-visible .checkbox {
+    display: none;
+}
+
+.menu-row:hover .checkbox-on,
+.menu-row:focus-visible .checkbox-on {
+    display: inline;
+}
+
+/* Bot name — natural width */
+.bot-name {
+    flex-shrink: 0;
+}
+
+/* Status labels */
+.status-online {
+    color: var(--status-online);
+}
+
+.status-offline {
+    color: var(--status-offline);
+}
+
+.menu-row:hover .status-online,
+.menu-row:focus-visible .status-online {
+    color: var(--background);
+}
+
+.menu-row:hover .status-offline,
+.menu-row:focus-visible .status-offline {
+    color: var(--background);
+}
+
+/* Uptime sparkline bar — pushed right with auto margin */
+.uptime-bar {
+    display: inline-flex;
+    gap: 0;
+    margin-left: auto;
+}
+
+.block-filled {
+    color: var(--status-online);
+}
+
+.block-empty {
+    color: var(--muted);
+}
+
+.menu-row:hover .block-filled,
+.menu-row:focus-visible .block-filled {
+    color: var(--background);
+}
+
+.menu-row:hover .block-empty,
+.menu-row:focus-visible .block-empty {
+    color: var(--background);
+}

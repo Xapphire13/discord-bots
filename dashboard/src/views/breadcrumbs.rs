@@ -1,6 +1,6 @@
 use maud::{Markup, html};
 
-use crate::views::ClassName;
+use crate::styles::Breadcrumbs as ClassName;
 
 pub struct Breadcrumb<'a> {
     pub label: &'a str,
