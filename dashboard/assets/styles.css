@@ -7,6 +7,7 @@
     --background: #1b1b1b;
     --status-online: #00ff41;
     --status-offline: #ff3232;
+    --muted: #444;
 }
 
 /* Global reset */
@@ -95,4 +96,90 @@ a:hover {
     color: var(--background);
     background: var(--foreground);
     border-right: 2px solid var(--foreground);
+}
+
+/* Terminal menu list */
+.menu {
+    display: flex;
+    flex-direction: column;
+    margin-top: 8px;
+}
+
+/* Menu row — horizontal layout, hover inverts colors */
+.menu-row {
+    display: flex;
+    align-items: center;
+    padding: 4px 8px;
+    cursor: pointer;
+    gap: 8px;
+    color: var(--foreground);
+}
+
+.menu-row:hover {
+    background: var(--foreground);
+    color: var(--background);
+    text-decoration: none;
+}
+
+/* Checkbox toggle on hover */
+.checkbox {
+    flex-shrink: 0;
+}
+
+.checkbox-on {
+    flex-shrink: 0;
+    display: none;
+}
+
+.menu-row:hover .checkbox {
+    display: none;
+}
+
+.menu-row:hover .checkbox-on {
+    display: inline;
+}
+
+/* Bot name — natural width */
+.bot-name {
+    flex-shrink: 0;
+}
+
+/* Status labels */
+.status-online {
+    color: var(--status-online);
+}
+
+.status-offline {
+    color: var(--status-offline);
+}
+
+.menu-row:hover .status-online {
+    color: var(--background);
+}
+
+.menu-row:hover .status-offline {
+    color: var(--background);
+}
+
+/* Uptime sparkline bar — pushed right with auto margin */
+.uptime-bar {
+    display: inline-flex;
+    gap: 0;
+    margin-left: auto;
+}
+
+.block-filled {
+    color: var(--status-online);
+}
+
+.block-empty {
+    color: var(--muted);
+}
+
+.menu-row:hover .block-filled {
+    color: var(--background);
+}
+
+.menu-row:hover .block-empty {
+    color: var(--background);
 }

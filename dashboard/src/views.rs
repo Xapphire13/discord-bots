@@ -1,5 +1,7 @@
+use std::collections::VecDeque;
 use std::sync::Arc;
 
+use chrono::{DateTime, Utc};
 use maud::{Markup, PreEscaped, html};
 use rocket::{
     State, get,
@@ -68,6 +70,18 @@ pub fn index(state: &State<Arc<AppState>>) -> Markup {
     page_shell("Dashboard | discord-bots", content)
 }
 
+fn uptime_blocks(history: &VecDeque<DateTime<Utc>>) -> [bool; 12] {
+    let now = Utc::now();
+    let mut blocks = [false; 12];
+    for ts in history {
+        let hours_ago = (now - *ts).num_hours();
+        if (0..12).contains(&hours_ago) {
+            blocks[11 - hours_ago as usize] = true;
+        }
+    }
+    blocks
+}
+
 fn bot_list_inner(state: &State<Arc<AppState>>) -> Markup {
     let registry = state.registry.read().unwrap();
     let mut bots = registry.bots();
@@ -75,21 +89,29 @@ fn bot_list_inner(state: &State<Arc<AppState>>) -> Markup {
 
     html! {
         @if bots.is_empty() {
-            p.empty { "No bots registered. Send a heartbeat to get started." }
+            p { "No bots registered. Send a heartbeat to get started." }
         } @else {
-            div.bot-grid {
+            div.(ClassName::MENU) {
                 @for bot in &bots {
                     @let online = registry.is_online(&bot.name, ONLINE_GRACE_PERIOD);
-                    @let ago = (chrono::Utc::now() - bot.last_heartbeat).num_seconds();
-                    a href=(format!("/bot/{}", bot.name)) {
-                        div.bot-card {
-                            div.bot-name { (bot.name) }
-                            @if online {
-                                div.status.online { "[ONLINE]" }
-                            } @else {
-                                div.status.offline { "[OFFLINE]" }
+                    @let blocks = uptime_blocks(&bot.heartbeat_history);
+                    a.(ClassName::MENU_ROW) href=(format!("/bot/{}", bot.name)) {
+                        span.(ClassName::CHECKBOX) { "[ ]" }
+                        span.(ClassName::CHECKBOX_ON) { "[x]" }
+                        span.(ClassName::BOT_NAME) { (bot.name) }
+                        span.(ClassName::UPTIME_BAR) {
+                            @for &filled in &blocks {
+                                @if filled {
+                                    span.(ClassName::BLOCK_FILLED) { "▮" }
+                                } @else {
+                                    span.(ClassName::BLOCK_EMPTY) { "▯" }
+                                }
                             }
-                            div.meta { "Last seen: " (format_relative(ago)) }
+                        }
+                        @if online {
+                            span.(ClassName::STATUS_ONLINE) { (PreEscaped("&nbsp;")) "[ONLINE]" }
+                        } @else {
+                            span.(ClassName::STATUS_OFFLINE) { "[OFFLINE]" }
                         }
                     }
                 }
