@@ -42,7 +42,22 @@ get_config_files() {
     esac
 }
 
+# Files that should always be (re)deployed, overwriting the remote copy, because
+# they are loaded from disk at runtime and must reflect changes from the repo.
+# Other config files are preserved on the remote if they already exist.
+get_always_overwrite_files() {
+    case "$1" in
+        summarizer-bot)
+            echo "system_prompt.txt"
+            ;;
+        *)
+            echo ""
+            ;;
+    esac
+}
+
 CONFIG_FILES=$(get_config_files "$BOT_NAME")
+ALWAYS_OVERWRITE_FILES=$(get_always_overwrite_files "$BOT_NAME")
 TARGET="aarch64-unknown-linux-gnu"
 BINARY_PATH="$REPO_ROOT/target/$TARGET/release/$BOT_NAME"
 BUILDER_IMAGE="discord-bots-builder"
@@ -82,7 +97,9 @@ scp "$BINARY_PATH" "$SSH_HOST:/tmp/$BOT_NAME/"
 
 for config_file in $CONFIG_FILES; do
     if [[ -f "$REPO_ROOT/$BOT_NAME/$config_file" ]]; then
-        if ssh "$SSH_HOST" "test -f /var/lib/$BOT_NAME/$config_file"; then
+        # Files in ALWAYS_OVERWRITE_FILES are loaded at runtime and must always
+        # reflect the repo, so copy them even if they already exist on the remote.
+        if [[ " $ALWAYS_OVERWRITE_FILES " != *" $config_file "* ]] && ssh "$SSH_HOST" "test -f /var/lib/$BOT_NAME/$config_file"; then
             echo "  Skipping $config_file (already exists on remote)"
         else
             echo "  Copying $config_file"
