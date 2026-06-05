@@ -52,13 +52,20 @@ Deploy a bot to a Raspberry Pi (or other aarch64 Linux host) using the deploy sc
 
 ### Prerequisites
 
+- [Podman](https://podman.io/) installed and its machine running:
+  `brew install podman && podman machine init && podman machine start`
 - SSH access to the target host (key-based authentication recommended)
-- Cross-compilation target installed: `rustup target add aarch64-unknown-linux-gnu`
 - A systemd service configured on the target host for each bot (run `install.sh` first)
+
+The deploy build runs inside a Debian bookworm container (matching the target's
+OS and glibc) rather than on the local host, so no Rust toolchain or
+cross-compilation target is required on the build machine. On an Apple Silicon
+Mac this is a native aarch64 Linux build; the podman machine is itself a
+lightweight Linux VM managed by podman.
 
 ### What the script does
 
-1. Cross-compiles the bot for `aarch64-unknown-linux-gnu`
+1. Builds the bot for `aarch64-unknown-linux-gnu` inside a Debian bookworm container
 2. Copies the binary and config files to the remote host
 3. Stops the systemd service
 4. Installs the binary to `/usr/local/bin/<bot-name>`

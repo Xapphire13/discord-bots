@@ -45,12 +45,30 @@ get_config_files() {
 CONFIG_FILES=$(get_config_files "$BOT_NAME")
 TARGET="aarch64-unknown-linux-gnu"
 BINARY_PATH="$REPO_ROOT/target/$TARGET/release/$BOT_NAME"
+BUILDER_IMAGE="discord-bots-builder"
+CARGO_CACHE_VOLUME="discord-bots-cargo-registry"
 
 echo "Deploying $BOT_NAME to $SSH_HOST"
 
-# Step 1: Cross-compile
-echo "Building $BOT_NAME for $TARGET..."
-cargo build --release -p "$BOT_NAME" --target "$TARGET"
+# Preflight: podman must be installed and its machine running
+if ! command -v podman >/dev/null 2>&1; then
+    echo "Error: podman is not installed."
+    echo "Install it with: brew install podman && podman machine init && podman machine start"
+    exit 1
+fi
+
+# Step 1: Build inside a Linux container matching the target (Debian bookworm /
+# glibc 2.36). On an Apple Silicon Mac the podman machine is aarch64 Linux, so
+# this is a native build for aarch64-unknown-linux-gnu — no cross toolchain.
+# The repo is bind-mounted, so the binary lands at $BINARY_PATH on the host just
+# as a local `cargo build` would; the cargo registry is cached across runs.
+echo "Building $BOT_NAME for $TARGET in container..."
+podman build -t "$BUILDER_IMAGE" -f "$REPO_ROOT/Containerfile.build" "$REPO_ROOT"
+podman run --rm \
+    -v "$REPO_ROOT":/src \
+    -v "$CARGO_CACHE_VOLUME":/usr/local/cargo/registry \
+    "$BUILDER_IMAGE" \
+    cargo build --release -p "$BOT_NAME" --target "$TARGET"
 
 if [[ ! -f "$BINARY_PATH" ]]; then
     echo "Error: Binary not found at $BINARY_PATH"
