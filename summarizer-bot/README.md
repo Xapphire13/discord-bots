@@ -8,7 +8,7 @@ the bot generates concise 1-3 sentence summaries that get straight to the point.
 
 - Automatic detection of long messages based on configurable thresholds
 - Local LLM inference via Ollama (no cloud API dependencies)
-- Concise, to-the-point summaries with no preamble
+- Concise, to-the-point summaries
 
 ## Requirements
 
