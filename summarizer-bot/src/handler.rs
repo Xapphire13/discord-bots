@@ -1,5 +1,5 @@
 use serenity::{
-    all::{EditMessage, EventHandler, Mentionable, Message, Ready},
+    all::{CreateEmbed, CreateMessage, EditMessage, EventHandler, Mentionable, Message, Ready},
     async_trait,
 };
 use tracing::{error, info};
@@ -45,14 +45,19 @@ impl EventHandler for Handler {
                 )
             }
 
+            // The summary leads with a preamble linking back to the original
+            // message and referencing its author. Masked links only render
+            // inside embeds, so the preamble is sent as an embed.
+            let message_link = msg.link();
+            let author_ref = msg.author.mention().to_string();
+
             let mut response = match msg
                 .channel_id
-                .say(
+                .send_message(
                     &ctx.http,
-                    format!(
-                        ":hourglass: Summarizing message from {}",
-                        msg.author.mention()
-                    ),
+                    CreateMessage::new().embed(CreateEmbed::new().description(format!(
+                        ":hourglass: Summarizing [message]({message_link}) from {author_ref}"
+                    ))),
                 )
                 .await
             {
@@ -80,8 +85,14 @@ impl EventHandler for Handler {
                 }
             };
 
+            let body =
+                format!("Summarized [message]({message_link}) from {author_ref}\n\n{summary}");
+
             if let Err(why) = response
-                .edit(&ctx.http, EditMessage::new().content(summary))
+                .edit(
+                    &ctx.http,
+                    EditMessage::new().embed(CreateEmbed::new().description(body)),
+                )
                 .await
             {
                 error!("Error sending message: {:?}", why);
