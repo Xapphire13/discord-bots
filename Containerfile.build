@@ -1,0 +1,6 @@
+# Build environment for the Discord bots' deploy binaries.
+# Base matches the deploy target (Debian 12 bookworm, glibc 2.36) so the binaries
+# run on the host. The non-slim `rust` image already ships pkg-config / libssl-dev.
+FROM docker.io/library/rust:1-bookworm
+
+WORKDIR /src
