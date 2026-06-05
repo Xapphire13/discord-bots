@@ -1,13 +1,6 @@
 # Build environment for the Discord bots' deploy binaries.
-#
-# The base image matches the deploy target (Raspberry Pi running Debian 12
-# "bookworm", glibc 2.36), so the resulting glibc-linked binaries are guaranteed
-# to run on the host. On an Apple Silicon Mac the podman machine is aarch64
-# Linux, so building for aarch64-unknown-linux-gnu here is a *native* build —
-# no cross toolchain required.
-#
-# The non-slim `rust` image is built on buildpack-deps, which already ships
-# pkg-config, libssl-dev, git, curl, etc. — everything openssl-sys / ring need.
+# Base matches the deploy target (Debian 12 bookworm, glibc 2.36) so the binaries
+# run on the host. The non-slim `rust` image already ships pkg-config / libssl-dev.
 FROM docker.io/library/rust:1-bookworm
 
 WORKDIR /src

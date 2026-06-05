@@ -57,11 +57,9 @@ Deploy a bot to a Raspberry Pi (or other aarch64 Linux host) using the deploy sc
 - SSH access to the target host (key-based authentication recommended)
 - A systemd service configured on the target host for each bot (run `install.sh` first)
 
-The deploy build runs inside a Debian bookworm container (matching the target's
-OS and glibc) rather than on the local host, so no Rust toolchain or
-cross-compilation target is required on the build machine. On an Apple Silicon
-Mac this is a native aarch64 Linux build; the podman machine is itself a
-lightweight Linux VM managed by podman.
+Podman lets us build the Linux target from a Mac without a local Rust toolchain:
+the deploy build runs inside a Debian bookworm container matching the target's
+OS and glibc.
 
 ### What the script does
 
