@@ -2,14 +2,13 @@
 
 A Discord bot that automatically summarizes long messages using a local LLM
 (Ollama). When users post messages exceeding a configurable length threshold,
-the bot generates concise 2-4 sentence summaries with a playful Franglish-style
-introduction.
+the bot generates concise 1-3 sentence summaries that get straight to the point.
 
 ## Features
 
 - Automatic detection of long messages based on configurable thresholds
 - Local LLM inference via Ollama (no cloud API dependencies)
-- Playful summary introductions mentioning the original author
+- Concise, to-the-point summaries with no preamble
 
 ## Requirements
 
