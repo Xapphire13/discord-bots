@@ -34,7 +34,7 @@ get_config_files() {
             echo ".env config.toml"
             ;;
         summarizer-bot)
-            echo ".env"
+            echo ".env system_prompt.txt"
             ;;
         *)
             echo ".env"

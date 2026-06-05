@@ -13,6 +13,7 @@ const LLM_TIMEOUT: Duration = Duration::from_mins(10);
 pub struct SummaryGenerator {
     ollama_client: Ollama,
     llm_model: String,
+    system_prompt: String,
 }
 
 impl SummaryGenerator {
@@ -20,6 +21,7 @@ impl SummaryGenerator {
         Self {
             llm_model: config.llm_model.clone(),
             ollama_client: Ollama::new(&config.llm_host, config.llm_port),
+            system_prompt: config.system_prompt.clone(),
         }
     }
 
@@ -32,7 +34,7 @@ impl SummaryGenerator {
                     self.llm_model.clone(),
                     format!("Author: {author}\nMessage: {content}"),
                 )
-                .system(include_str!("../system_prompt.txt")),
+                .system(self.system_prompt.as_str()),
             ),
         )
         .await
