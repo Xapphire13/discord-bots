@@ -61,6 +61,10 @@ Podman lets us build the Linux target from a Mac without a local Rust toolchain:
 the deploy build runs inside a Debian bookworm container matching the target's
 OS and glibc.
 
+`podman machine init` is one-time; re-run `podman machine start` after a reboot.
+Stopping the machine (`podman machine stop`) is optional — it only frees the
+idle VM's resources and is not required between deploys.
+
 ### What the script does
 
 1. Builds the bot for `aarch64-unknown-linux-gnu` inside a Debian bookworm container
