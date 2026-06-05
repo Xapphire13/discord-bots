@@ -40,6 +40,21 @@ MESSAGE_LENGTH_MAX=2000
 | `MESSAGE_LENGTH_MIN`       | Minimum message length to trigger summarization                 |
 | `MESSAGE_LENGTH_MAX`       | Maximum message length to process (longer messages are ignored) |
 
+### System prompt
+
+The LLM system prompt lives in `system_prompt.txt` rather than being baked into
+the binary. It is read at startup from the working directory in release builds
+(i.e. the systemd `WorkingDirectory`, `/var/lib/summarizer-bot/`), so you can
+tweak the prompt and apply it with a service restart — no rebuild required:
+
+```bash
+sudo nano /var/lib/summarizer-bot/system_prompt.txt
+sudo systemctl restart summarizer-bot
+```
+
+In debug builds the file is read from the crate directory
+(`summarizer-bot/system_prompt.txt`) for convenient local development.
+
 ## Building
 
 From the workspace root:
