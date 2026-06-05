@@ -56,7 +56,7 @@ impl EventHandler for Handler {
                 .send_message(
                     &ctx.http,
                     CreateMessage::new().embed(CreateEmbed::new().description(format!(
-                        ":hourglass: Summarizing [message]({message_link}) from {author_ref}"
+                        "### :hourglass: Summarizing [message]({message_link}) from {author_ref}"
                     ))),
                 )
                 .await
@@ -86,7 +86,7 @@ impl EventHandler for Handler {
             };
 
             let body =
-                format!("Summarized [message]({message_link}) from {author_ref}\n\n{summary}");
+                format!("### Summarized [message]({message_link}) from {author_ref}\n\n{summary}");
 
             if let Err(why) = response
                 .edit(
