@@ -65,11 +65,30 @@ CARGO_CACHE_VOLUME="discord-bots-cargo-registry"
 
 echo "Deploying $BOT_NAME to $SSH_HOST"
 
-# Preflight: podman must be installed and its machine running
+# Preflight: podman must be installed
 if ! command -v podman >/dev/null 2>&1; then
     echo "Error: podman is not installed."
-    echo "Install it with: brew install podman && podman machine init && podman machine start"
+    echo "Install it with: brew install podman && podman machine init"
     exit 1
+fi
+
+# Ensure the podman machine is running. `podman info` succeeds only when the
+# backing machine is up (on a native Linux host it always succeeds, so this is a
+# no-op there). If we have to start the machine, stop it again on exit so we
+# leave the host as we found it.
+STARTED_PODMAN_MACHINE=false
+stop_podman_machine() {
+    if [[ "$STARTED_PODMAN_MACHINE" == true ]]; then
+        echo "Stopping podman machine..."
+        podman machine stop || true
+    fi
+}
+trap stop_podman_machine EXIT
+
+if ! podman info >/dev/null 2>&1; then
+    echo "Starting podman machine..."
+    podman machine start
+    STARTED_PODMAN_MACHINE=true
 fi
 
 # Step 1: Build inside a Linux container matching the target (Debian bookworm /
