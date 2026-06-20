@@ -89,6 +89,7 @@ impl EventHandler for Handler {
         };
 
         let input_len = msg.content.len();
+        let author_id = msg.author.id.to_string();
         let started = Instant::now();
         let summary = self
             .summary_generator
@@ -100,6 +101,7 @@ impl EventHandler for Handler {
             Ok(summary) => {
                 self.record_summary(
                     source,
+                    &author_id,
                     "success",
                     latency_ms,
                     input_len,
@@ -113,7 +115,7 @@ impl EventHandler for Handler {
                     SummaryError::Timeout => "timeout",
                     SummaryError::Generation(_) => "llm_error",
                 };
-                self.record_summary(source, outcome, latency_ms, input_len, None);
+                self.record_summary(source, &author_id, outcome, latency_ms, input_len, None);
 
                 if let Err(why) = response.delete(&ctx.http).await {
                     error!("Error deleting initial message: {:?}", why);
@@ -172,6 +174,7 @@ impl Handler {
     fn record_summary(
         &self,
         source: &'static str,
+        author_id: &str,
         outcome: &'static str,
         latency_ms: f64,
         input_len: usize,
@@ -181,6 +184,7 @@ impl Handler {
             let mut event = metrics
                 .event(Event::SummaryGenerated)
                 .label("source", source)
+                .label("author_id", author_id)
                 .label("outcome", outcome)
                 .value("latency_ms", latency_ms)
                 .value("input_len", input_len as f64);
