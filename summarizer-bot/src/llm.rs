@@ -1,6 +1,5 @@
 use std::time::Duration;
 
-use anyhow::{Context, Result};
 use ollama_rs::{Ollama, generation::completion::request::GenerationRequest};
 use tokio::time::timeout;
 use tracing::instrument;
@@ -8,6 +7,17 @@ use tracing::instrument;
 use crate::config::Config;
 
 const LLM_TIMEOUT: Duration = Duration::from_mins(10);
+
+/// Why a summary couldn't be generated. Kept distinct from a generic error so
+/// callers can report the outcome (e.g. as a metric label) — a timeout is the
+/// leading indicator of an unhealthy LLM backend and worth tracking separately.
+#[derive(Debug, thiserror::Error)]
+pub enum SummaryError {
+    #[error("LLM request timed out")]
+    Timeout,
+    #[error("LLM generation failed: {0}")]
+    Generation(#[source] ollama_rs::error::OllamaError),
+}
 
 #[derive(Debug)]
 pub struct SummaryGenerator {
@@ -26,7 +36,11 @@ impl SummaryGenerator {
     }
 
     #[instrument(level = "trace", skip_all)]
-    pub async fn generate_summary(&self, author: &str, content: &str) -> Result<String> {
+    pub async fn generate_summary(
+        &self,
+        author: &str,
+        content: &str,
+    ) -> Result<String, SummaryError> {
         let result = timeout(
             LLM_TIMEOUT,
             self.ollama_client.generate(
@@ -43,8 +57,8 @@ impl SummaryGenerator {
             ),
         )
         .await
-        .context("LLM request timed out")?
-        .context("LLM generation failed")?;
+        .map_err(|_| SummaryError::Timeout)?
+        .map_err(SummaryError::Generation)?;
 
         Ok(result.response)
     }

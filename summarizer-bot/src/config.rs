@@ -1,9 +1,14 @@
 use std::env;
 use std::fs;
 use std::path::PathBuf;
+use std::time::Duration;
 
 use anyhow::{Context, Result, anyhow};
 use shared::config::BotConfig;
+
+/// Default interval between automatic heartbeats when `METRICS_HEARTBEAT_INTERVAL`
+/// is unset.
+const DEFAULT_HEARTBEAT_INTERVAL_SECS: u64 = 30;
 
 pub struct Config {
     pub bot: BotConfig,
@@ -15,6 +20,16 @@ pub struct Config {
     /// System prompt for the summarizer, loaded from `system_prompt.txt` in the
     /// app's data directory at startup. Restart the service to pick up edits.
     pub system_prompt: String,
+    /// Metrics reporting config. `None` when the `METRICS_*` env vars are unset,
+    /// in which case the bot runs without reporting metrics.
+    pub metrics: Option<MetricsConfig>,
+}
+
+/// Config for reporting metrics to a service-panel instance.
+pub struct MetricsConfig {
+    pub ingest_endpoint: String,
+    pub heartbeat_endpoint: String,
+    pub heartbeat_interval: Duration,
 }
 
 impl Config {
@@ -36,6 +51,7 @@ impl Config {
                 .parse()
                 .context("MESSAGE_LENGTH_MAX must be a valid number")?,
             system_prompt: load_system_prompt()?,
+            metrics: load_metrics_config()?,
         };
 
         if config.message_length_min > config.message_length_max {
@@ -43,6 +59,50 @@ impl Config {
         }
 
         Ok(config)
+    }
+}
+
+/// Reads the optional metrics config.
+///
+/// Metrics are enabled only when both `METRICS_INGEST_ENDPOINT` and
+/// `METRICS_HEARTBEAT_ENDPOINT` are set; if neither is set the bot runs without
+/// metrics. A blank value counts as unset, so an empty endpoint can't slip
+/// through as a silently-failing URL. Setting only one is treated as a
+/// misconfiguration so a typo doesn't silently disable reporting.
+fn load_metrics_config() -> Result<Option<MetricsConfig>> {
+    // Treat a blank value the same as unset.
+    let read = |key| env::var(key).ok().filter(|value| !value.is_empty());
+    let ingest_endpoint = read("METRICS_INGEST_ENDPOINT");
+    let heartbeat_endpoint = read("METRICS_HEARTBEAT_ENDPOINT");
+
+    match (ingest_endpoint, heartbeat_endpoint) {
+        (None, None) => Ok(None),
+        (Some(ingest_endpoint), Some(heartbeat_endpoint)) => {
+            let heartbeat_interval = match read("METRICS_HEARTBEAT_INTERVAL") {
+                Some(secs) => {
+                    let secs: u64 = secs
+                        .parse()
+                        .context("METRICS_HEARTBEAT_INTERVAL must be a number of seconds")?;
+                    // A zero interval would panic `tokio::time::interval`.
+                    if secs == 0 {
+                        return Err(anyhow!(
+                            "METRICS_HEARTBEAT_INTERVAL must be greater than zero"
+                        ));
+                    }
+                    Duration::from_secs(secs)
+                }
+                None => Duration::from_secs(DEFAULT_HEARTBEAT_INTERVAL_SECS),
+            };
+
+            Ok(Some(MetricsConfig {
+                ingest_endpoint,
+                heartbeat_endpoint,
+                heartbeat_interval,
+            }))
+        }
+        _ => Err(anyhow!(
+            "METRICS_INGEST_ENDPOINT and METRICS_HEARTBEAT_ENDPOINT must both be set or both unset"
+        )),
     }
 }
 
