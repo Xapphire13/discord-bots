@@ -1075,7 +1075,7 @@ checksum = "f8ca58f447f06ed17d5fc4043ce1b10dd205e060fb3ce5b979b8ed8e59ff3f79"
 [[package]]
 name = "metrics"
 version = "0.1.0"
-source = "git+ssh://git@gitlab.com/Xapphire13/service-panel.git#668f88606b5dc5d223620315c203768073a393e6"
+source = "git+https://gitlab.com/Xapphire13/service-panel.git#668f88606b5dc5d223620315c203768073a393e6"
 dependencies = [
  "chrono",
  "serde",
@@ -1084,7 +1084,7 @@ dependencies = [
 [[package]]
 name = "metrics-client"
 version = "0.1.0"
-source = "git+ssh://git@gitlab.com/Xapphire13/service-panel.git#668f88606b5dc5d223620315c203768073a393e6"
+source = "git+https://gitlab.com/Xapphire13/service-panel.git#668f88606b5dc5d223620315c203768073a393e6"
 dependencies = [
  "chrono",
  "metrics",

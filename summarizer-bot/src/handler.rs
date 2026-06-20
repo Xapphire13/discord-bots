@@ -10,7 +10,7 @@ use tracing::{error, info};
 use crate::{
     config::Config,
     llm::{SummaryError, SummaryGenerator},
-    metrics::Event,
+    metrics::{ApiOp, Event, Outcome, SkipReason, Source, label, value},
 };
 
 pub struct Handler {
@@ -33,17 +33,17 @@ impl EventHandler for Handler {
         }
 
         let is_dm = msg.guild_id.is_none();
-        let source = if is_dm { "dm" } else { "guild" };
+        let source = if is_dm { Source::Dm } else { Source::Guild };
 
         // DMs are always summarized; guild messages must fall within the
         // configured length window.
         if !is_dm {
             if msg.content.len() < self.message_length_min {
-                self.record_skip("too_short");
+                self.record_skip(SkipReason::TooShort);
                 return;
             }
             if msg.content.len() > self.message_length_max {
-                self.record_skip("too_long");
+                self.record_skip(SkipReason::TooLong);
                 return;
             }
         }
@@ -83,7 +83,7 @@ impl EventHandler for Handler {
             Ok(msg) => msg,
             Err(why) => {
                 error!("Error sending initial message: {why:?}");
-                self.record_api_error("send");
+                self.record_api_error(ApiOp::Send);
                 return;
             }
         };
@@ -102,7 +102,7 @@ impl EventHandler for Handler {
                 self.record_summary(
                     source,
                     &author_id,
-                    "success",
+                    Outcome::Success,
                     latency_ms,
                     input_len,
                     Some(summary.len()),
@@ -112,13 +112,13 @@ impl EventHandler for Handler {
             Err(why) => {
                 error!("Error summarizing message: {why:?}");
                 let outcome = match why {
-                    SummaryError::Timeout => "timeout",
-                    SummaryError::Generation(_) => "llm_error",
+                    SummaryError::Timeout => Outcome::Timeout,
+                    SummaryError::Generation(_) => Outcome::LlmError,
                 };
                 self.record_summary(source, &author_id, outcome, latency_ms, input_len, None);
 
                 if let Err(why) = response.delete(&ctx.http).await {
-                    error!("Error deleting initial message: {:?}", why);
+                    error!("Error deleting initial message: {why:?}");
                 }
 
                 return;
@@ -135,8 +135,8 @@ impl EventHandler for Handler {
             )
             .await
         {
-            error!("Error sending message: {:?}", why);
-            self.record_api_error("edit");
+            error!("Error sending message: {why:?}");
+            self.record_api_error(ApiOp::Edit);
         }
     }
 
@@ -160,11 +160,11 @@ impl Handler {
     }
 
     /// Records a message that was dropped without being summarized.
-    fn record_skip(&self, reason: &'static str) {
+    fn record_skip(&self, reason: SkipReason) {
         if let Some(metrics) = &self.metrics {
             metrics
                 .event(Event::MessageSkipped)
-                .label("reason", reason)
+                .label(label::REASON, reason.as_str())
                 .record();
         }
     }
@@ -173,9 +173,9 @@ impl Handler {
     /// present on success.
     fn record_summary(
         &self,
-        source: &'static str,
+        source: Source,
         author_id: &str,
-        outcome: &'static str,
+        outcome: Outcome,
         latency_ms: f64,
         input_len: usize,
         output_len: Option<usize>,
@@ -183,24 +183,24 @@ impl Handler {
         if let Some(metrics) = &self.metrics {
             let mut event = metrics
                 .event(Event::SummaryGenerated)
-                .label("source", source)
-                .label("author_id", author_id)
-                .label("outcome", outcome)
-                .value("latency_ms", latency_ms)
-                .value("input_len", input_len as f64);
+                .label(label::SOURCE, source.as_str())
+                .label(label::AUTHOR_ID, author_id)
+                .label(label::OUTCOME, outcome.as_str())
+                .value(value::LATENCY_MS, latency_ms)
+                .value(value::INPUT_LEN, input_len as f64);
             if let Some(output_len) = output_len {
-                event = event.value("output_len", output_len as f64);
+                event = event.value(value::OUTPUT_LEN, output_len as f64);
             }
             event.record();
         }
     }
 
-    /// Records a failed Discord API call (`op` is `send` or `edit`).
-    fn record_api_error(&self, op: &'static str) {
+    /// Records a failed Discord API call.
+    fn record_api_error(&self, op: ApiOp) {
         if let Some(metrics) = &self.metrics {
             metrics
                 .event(Event::DiscordApiError)
-                .label("op", op)
+                .label(label::OP, op.as_str())
                 .record();
         }
     }
