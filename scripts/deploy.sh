@@ -72,23 +72,26 @@ if ! command -v podman >/dev/null 2>&1; then
     exit 1
 fi
 
-# Ensure the podman machine is running. `podman info` succeeds only when the
-# backing machine is up (on a native Linux host it always succeeds, so this is a
-# no-op there). If we have to start the machine, stop it again on exit so we
-# leave the host as we found it.
-STARTED_PODMAN_MACHINE=false
+# Ensure the podman machine is running, stopping it again on exit only if we
+# started it (so an already-running machine is left untouched). The trap covers
+# INT/TERM as well as EXIT so a Ctrl-C during the build still cleans up.
+PODMAN_MACHINE_STARTED=false
 stop_podman_machine() {
-    if [[ "$STARTED_PODMAN_MACHINE" == true ]]; then
+    if [[ "$PODMAN_MACHINE_STARTED" == true ]]; then
         echo "Stopping podman machine..."
-        podman machine stop || true
+        podman machine stop || echo "Warning: failed to stop podman machine"
+        PODMAN_MACHINE_STARTED=false
     fi
 }
-trap stop_podman_machine EXIT
+trap stop_podman_machine EXIT INT TERM
 
+# `podman info` succeeds only when a container backend is reachable; on a native
+# Linux host it always succeeds, so this block is a no-op there. Claim ownership
+# before starting so an interrupt mid-start still triggers cleanup.
 if ! podman info >/dev/null 2>&1; then
     echo "Starting podman machine..."
+    PODMAN_MACHINE_STARTED=true
     podman machine start
-    STARTED_PODMAN_MACHINE=true
 fi
 
 # Step 1: Build inside a Linux container matching the target (Debian bookworm /
