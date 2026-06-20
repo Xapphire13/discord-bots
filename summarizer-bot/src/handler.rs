@@ -10,6 +10,7 @@ use tracing::{error, info};
 use crate::{
     config::Config,
     llm::{SummaryError, SummaryGenerator},
+    metrics::Event,
 };
 
 pub struct Handler {
@@ -20,7 +21,7 @@ pub struct Handler {
     message_length_max: usize,
     // Reports metrics to a service-panel instance. `None` when metrics are
     // disabled, in which case every emit is a no-op.
-    metrics: Option<MetricsClient>,
+    metrics: Option<MetricsClient<Event>>,
 }
 
 #[async_trait]
@@ -146,7 +147,7 @@ impl Handler {
     pub fn new(
         summary_generator: SummaryGenerator,
         config: &Config,
-        metrics: Option<MetricsClient>,
+        metrics: Option<MetricsClient<Event>>,
     ) -> Self {
         Handler {
             summary_generator,
@@ -160,7 +161,7 @@ impl Handler {
     fn record_skip(&self, reason: &'static str) {
         if let Some(metrics) = &self.metrics {
             metrics
-                .event("message_skipped")
+                .event(Event::MessageSkipped)
                 .label("reason", reason)
                 .record();
         }
@@ -178,7 +179,7 @@ impl Handler {
     ) {
         if let Some(metrics) = &self.metrics {
             let mut event = metrics
-                .event("summary_generated")
+                .event(Event::SummaryGenerated)
                 .label("source", source)
                 .label("outcome", outcome)
                 .value("latency_ms", latency_ms)
@@ -193,7 +194,10 @@ impl Handler {
     /// Records a failed Discord API call (`op` is `send` or `edit`).
     fn record_api_error(&self, op: &'static str) {
         if let Some(metrics) = &self.metrics {
-            metrics.event("discord_api_error").label("op", op).record();
+            metrics
+                .event(Event::DiscordApiError)
+                .label("op", op)
+                .record();
         }
     }
 }

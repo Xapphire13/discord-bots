@@ -10,6 +10,7 @@ use crate::llm::SummaryGenerator;
 mod config;
 mod handler;
 mod llm;
+mod metrics;
 
 /// Service identifier reported with every metric and heartbeat.
 const METRICS_SOURCE: &str = "summarizer-bot";
@@ -25,7 +26,7 @@ async fn main() -> Result<()> {
 
     let metrics = config.metrics.as_ref().map(|metrics| {
         info!("Metrics enabled, reporting to {}", metrics.ingest_endpoint);
-        MetricsClient::new(
+        MetricsClient::<metrics::Event>::new(
             ClientConfig::new(
                 &metrics.ingest_endpoint,
                 &metrics.heartbeat_endpoint,
