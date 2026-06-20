@@ -1073,6 +1073,27 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f8ca58f447f06ed17d5fc4043ce1b10dd205e060fb3ce5b979b8ed8e59ff3f79"
 
 [[package]]
+name = "metrics"
+version = "0.1.0"
+source = "git+ssh://git@gitlab.com/Xapphire13/service-panel.git#668f88606b5dc5d223620315c203768073a393e6"
+dependencies = [
+ "chrono",
+ "serde",
+]
+
+[[package]]
+name = "metrics-client"
+version = "0.1.0"
+source = "git+ssh://git@gitlab.com/Xapphire13/service-panel.git#668f88606b5dc5d223620315c203768073a393e6"
+dependencies = [
+ "chrono",
+ "metrics",
+ "reqwest",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
 name = "mime"
 version = "0.3.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2024,9 +2045,11 @@ name = "summarizer-bot"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "metrics-client",
  "ollama-rs",
  "serenity",
  "shared",
+ "thiserror 2.0.18",
  "tokio",
  "tracing",
 ]
@@ -2583,6 +2606,17 @@ name = "utf8_iter"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b6c140620e7ffbb22c2dee59cafe6084a59b5ffc27a8859a5f0d494b5d52b6be"
+
+[[package]]
+name = "uuid"
+version = "1.23.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "144d6b123cef80b301b8f72a9e2ca4370ddec21950d0a103dd22c437006d2db7"
+dependencies = [
+ "getrandom 0.4.1",
+ "js-sys",
+ "wasm-bindgen",
+]
 
 [[package]]
 name = "uwl"

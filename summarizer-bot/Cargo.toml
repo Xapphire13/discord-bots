@@ -6,8 +6,10 @@ publish = false
 
 [dependencies]
 anyhow = "1.0.100"
+metrics-client = { git = "ssh://git@gitlab.com/Xapphire13/service-panel.git" }
 ollama-rs = "0.3.3"
 serenity = "0.12.5"
 shared = { version = "0.1.0", path = "../shared" }
+thiserror = "2.0.18"
 tokio = { version = "1.49.0", features = ["macros", "rt-multi-thread"] }
 tracing = "0.1.44"
